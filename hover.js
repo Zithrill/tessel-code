@@ -1,9 +1,7 @@
 var tessel = require('tessel');
-var accel = require('accel-mma84').use(tessel.port['A']);
 var servolib = require('servo-pca9685');
+var accel = require('accel-mma84').use(tessel.port['A']);
 var servo = servolib.use(tessel.port['B']);
-
-//continue to updated servo obj speeds with servo reads
 
 var startupTime = 800; // 500 < minStartupTime? < 1000 in ms
 var maxPWM = 0.125; // 
@@ -19,7 +17,7 @@ var accelModuleReady = false;
 servo.on('ready', function(){
   servoModuleReady = true;
   if(accelModuleReady && servoModuleReady){ 
-    control();
+    onModulesReady();
   }
 });
 
@@ -28,28 +26,26 @@ accel.on('ready', function () {
   accel.setOutputRate(800, function(err){
     accelModuleReady = true;
     if(accelModuleReady && servoModuleReady){ 
-      control();
+      onModulesReady();
     }
   });
 })
 
-// MAIN CONTROL LOOP
-var control = function(){
-  process.stdin.resume();
-
+var onModulesReady = function(){
   // Allow user to land immediately
+  process.stdin.resume();
   process.stdin.on('data', function (throttle) {
     hovering = false;
     console.log('User ordered immediate landing', String(throttle));
   });
 
-
   configureMotor(1, hover);
   configureMotor(2, hover);
   configureMotor(3, hover);
   configureMotor(4, hover);
-
 };
+
+var onMotorsConfigured = function(){}; // ;)
 
 var motors = {
   1: {
@@ -79,16 +75,6 @@ motors['2'].oppositeMotor = motors['4'];
 motors['3'].oppositeMotor = motors['1'];
 motors['4'].oppositeMotor = motors['2'];
 
-// var readAndUpdateSpeed = function(err, motor){
-//   if(err){console.log('err',err); throw err;}
-//   servo.read(motor, function (err, reading) {
-//     motors[motor].speed = reading;
-//     // Prettify throttle percentage output to console:
-//     var color = motor % 2 ? '\033[92m' : '\033[91m';
-//     console.log(color+motor+': '+(reading*100<10?' ':'')+(reading*100).toFixed(1)+'%'+'\033[97m');
-//   });
-// };
-
 var turnOnMotor = function(motor){
   servo.move(motor, userMaxSpeed);
 };
@@ -97,51 +83,40 @@ var turnOffMotor = function(motor){
   servo.move(motor, 0);
 };
 
-var correction = function(axis, accelReading, callback){
+var balanceAxis = function(axis, accelReading, callback){
+  var balanceMotors = function(posMotor, negMotor){
+    if(accelReading > accelThreshold){
+      turnOffMotor(posMotor);
+      turnOnMotor(negMotor);
+    }
+    else if(accelReading < -1 * accelThreshold){
+      turnOffMotor(negMotor);
+      turnOnMotor(posMotor);
+    }
+    else{ // all off
+      turnOffMotor(posMotor);
+      turnOffMotor(negMotor);
+    }
+  } 
+
   if(axis === 'y'){
-    if(accelReading > accelThreshold){
-      console.log('reading Y', accelReading)
-      turnOffMotor(1);
-      turnOnMotor(3);
-    }
-    else if(accelReading < -1 * accelThreshold){
-      console.log('reading Y', accelReading)
-      turnOffMotor(3);
-      turnOnMotor(1);
-    }
-    else{
-      turnOffMotor(1);
-      turnOffMotor(3);
-    }
+    balanceMotors(1,3);
   }
-  //DUPLICATED CODE
   if(axis === 'x'){
-    if(accelReading > accelThreshold){
-      console.log('reading X', accelReading)
-      turnOffMotor(2);
-      turnOnMotor(4);
-    }
-    else if(accelReading < -1 * accelThreshold){
-      console.log('reading X', accelReading)
-      turnOffMotor(4);
-      turnOnMotor(2);          
-    }
-    else {
-      turnOffMotor(2);
-      turnOffMotor(4);
-    }
+    balanceMotors(2,4);
   }
+
   callback();
 };
 
 var loopx = function(x){
-  correction('x', x, function(){
+  balanceAxis('x', x, function(){
     hover();
   });
 };
 
 var loopy = function(y){
-  correction('y', y, function(){
+  balanceAxis('y', y, function(){
     hover();
   });
 };
