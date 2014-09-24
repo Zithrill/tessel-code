@@ -11,9 +11,9 @@ var minPWM = 0.002; // Exhaustively tested.
 
 var userSpeedIncrement = 0.05;
 var userMaxSpeed = 0.15;
-var accelThreshold = 0.06;
+var accelThreshold = 0.2;
 
-var hasBeenCalled = false;
+var hasBeenCalled = false; //CHANGE VARIABLE NAME
 var servoReady = false;
 // var hovering;
 
@@ -69,61 +69,85 @@ accel.on('ready', function () {
       });
     };
 
-    var throttleUp = function(motor, deltaSpeed){
-      var newSpeed = servos[motor].speed + deltaSpeed
-      if (newSpeed <= userMaxSpeed && newSpeed >= 0 && newSpeed <= 1) {
-        servo.move(motor, newSpeed, function(){
-          readAndUpdateSpeed(err, motor);
-        });
-      } else {
-        motor = servos[motor].oppositeMotor.motor;
-        throttleDown(motor, deltaSpeed);
-        // Figure out how to handle when we hit max
-      }
+    // var throttleUp = function(motor, deltaSpeed){
+    //   var newSpeed = servos[motor].speed + deltaSpeed
+    //   if (newSpeed <= userMaxSpeed && newSpeed >= 0 && newSpeed <= 1) {
+    //     servo.move(motor, newSpeed, function(){
+    //       readAndUpdateSpeed(err, motor);
+    //     });
+    //   } else {
+    //     motor = servos[motor].oppositeMotor.motor;
+    //     throttleDown(motor, deltaSpeed);
+    //     // Figure out how to handle when we hit max
+    //   }
+    // };
+
+    // var throttleDown = function(motor, deltaSpeed){
+    //   var newSpeed = servos[motor].speed - deltaSpeed
+    //   // console.log('throttleDown', motor, newSpeed)
+    //   if (newSpeed <= userMaxSpeed && newSpeed >= 0 && newSpeed <= 1) {
+    //     servo.move(motor, newSpeed, function(){
+    //       readAndUpdateSpeed(err, motor); 
+    //     });
+    //   }
+    // };
+
+    var turnOn = function(motor){
+      servo.move(motor, userMaxSpeed);
     };
 
-    var throttleDown = function(motor, deltaSpeed){
-      var newSpeed = servos[motor].speed - deltaSpeed
-      // console.log('throttleDown', motor, newSpeed)
-      if (newSpeed <= userMaxSpeed && newSpeed >= 0 && newSpeed <= 1) {
-        servo.move(motor, newSpeed, function(){
-          readAndUpdateSpeed(err, motor); 
-        });
-      }
+    var turnOff = function(motor){
+      servo.move(motor, 0);
     };
-     
+
+
     var correction = function(axis, accelReading, cb){
       if(axis === 'y'){
         if(accelReading > accelThreshold){
-          throttleDown(servos[1].motor, userSpeedIncrement);
+          console.log('reading Y', accelReading)
+          turnOff(1);
+          turnOn(3);
+          // throttleDown(servos[1].motor, userSpeedIncrement);
+          //turn on one
+          //turn off two
         }
         else if(accelReading < -1 * accelThreshold){
-          throttleDown(servos[3].motor, userSpeedIncrement);
+          console.log('reading Y', accelReading)
+          turnOff(3);
+          turnOn(1);
+          // throttleDown(servos[3].motor, userSpeedIncrement);
         }
-        else{
-          servo.move(1, userMaxSpeed, function(){
-            readAndUpdateSpeed(err, 1);
-          });
-          servo.move(3, userMaxSpeed, function(){
-            readAndUpdateSpeed(err, 3);
-          });
-        }
+        // else{
+        //   servo.move(1, userMaxSpeed, function(){
+        //     readAndUpdateSpeed(err, 1);
+        //   });
+        //   servo.move(3, userMaxSpeed, function(){
+        //     readAndUpdateSpeed(err, 3);
+        //   });
+        // }
       }
+      //DUPLICATED CODE
       if(axis === 'x'){
         if(accelReading > accelThreshold){
-          throttleDown(servos[2].motor, userSpeedIncrement);
+          console.log('reading X', accelReading)
+          turnOff(2);
+          turnOn(4);
+          // throttleDown(servos[2].motor, userSpeedIncrement);
         }
         else if(accelReading < -1 * accelThreshold){
-          throttleDown(servos[4].motor, userSpeedIncrement);
+          console.log('reading X', accelReading)
+          turnOff(4);
+          turnOn(2);          
+          // throttleDown(servos[4].motor, userSpeedIncrement);
         }
-        else{
-          servo.move(2, userMaxSpeed, function(){
-            readAndUpdateSpeed(err, 2);
-          });
-          servo.move(4, userMaxSpeed, function(){
-            readAndUpdateSpeed(err, 4);
-          });
-        }
+        // else{
+        //   servo.move(2, userMaxSpeed, function(){
+        //     readAndUpdateSpeed(err, 2);
+        //   });
+        //   servo.move(4, userMaxSpeed, function(){
+        //     readAndUpdateSpeed(err, 4);
+        //   });
+        // }
       }
       cb();
     };
@@ -179,18 +203,10 @@ accel.on('ready', function () {
 
     var configureMotor = function (servoNumber, callback) {
       console.log('Configuring motor '+servoNumber+'...');
-      // servo.read(servoNumber, function (err, reading) {
-        // console.log('ready reading:', reading);
       servo.configure(servoNumber, minPWM, maxPWM , function () {
-          // servo.read(servoNumber, function (err, reading) {
-            // console.log('configure reading:', reading);
         servo.setDutyCycle(servoNumber, maxPWM, function (err) {
-              // servo.read(servoNumber, function (err, reading) {
-                // console.log('setDutyCycle max reading:', reading)
           setTimeout(function(){
             servo.setDutyCycle(servoNumber, minPWM, function (err) {
-                    // servo.read(servoNumber, function (err, reading) {
-                      // console.log('setDutyCycle min reading:', reading)
               setTimeout(function(){ 
                 console.log(servoNumber+': ARMED');
                 if(servoNumber === 4 && !hasBeenCalled){
@@ -198,14 +214,10 @@ accel.on('ready', function () {
                   callback();
                 }
               }, startupTime);
-            // });
             });
           }, startupTime);
-              // });
         });
-          // });
       });
-      // });
     };
 
     if(servoReady){
