@@ -3,14 +3,13 @@ var accel = require('accel-mma84').use(tessel.port['A']);
 var servolib = require('servo-pca9685');
 var servo = servolib.use(tessel.port['B']);
 
-
 //continue to updated servo obj speeds with servo reads
 
 var startupTime = 800; // 500 < minStartupTime? < 1000 in ms
 var maxPWM = 0.125; // 
 var minPWM = 0.002; // Exhaustively tested. 
 
-var userSpeedIncrement = 0.005;
+var userSpeedIncrement = 0.05;
 var userMaxSpeed = 0.15;
 var accelThreshold = 0.06;
 
@@ -47,7 +46,7 @@ accel.on('ready', function () {
       },
       3: {
         motor: 3,
-        speed: 0 
+        speed: 0
       },
       4: {
         motor: 4,
@@ -180,33 +179,33 @@ accel.on('ready', function () {
 
     var configureMotor = function (servoNumber, callback) {
       console.log('Configuring motor '+servoNumber+'...');
-      servo.read(servoNumber, function (err, reading) {
+      // servo.read(servoNumber, function (err, reading) {
         // console.log('ready reading:', reading);
-        servo.configure(servoNumber, minPWM, maxPWM , function () {
-          servo.read(servoNumber, function (err, reading) {
+      servo.configure(servoNumber, minPWM, maxPWM , function () {
+          // servo.read(servoNumber, function (err, reading) {
             // console.log('configure reading:', reading);
-            servo.setDutyCycle(servoNumber, maxPWM, function (err) {
-              servo.read(servoNumber, function (err, reading) {
+        servo.setDutyCycle(servoNumber, maxPWM, function (err) {
+              // servo.read(servoNumber, function (err, reading) {
                 // console.log('setDutyCycle max reading:', reading)
-                setTimeout(function(){
-                  servo.setDutyCycle(servoNumber, minPWM, function (err) {
-                    servo.read(servoNumber, function (err, reading) {
+          setTimeout(function(){
+            servo.setDutyCycle(servoNumber, minPWM, function (err) {
+                    // servo.read(servoNumber, function (err, reading) {
                       // console.log('setDutyCycle min reading:', reading)
-                      setTimeout(function(){ 
-                        console.log(servoNumber+': ARMED');
-                        if(servoNumber === 4 && !hasBeenCalled){
-                          hasBeenCalled = true;
-                          callback();
-                        }
-                      }, startupTime);
-                    });
-                  });
-                }, startupTime);
-              });
+              setTimeout(function(){ 
+                console.log(servoNumber+': ARMED');
+                if(servoNumber === 4 && !hasBeenCalled){
+                  hasBeenCalled = true;
+                  callback();
+                }
+              }, startupTime);
+            // });
             });
-          });
+          }, startupTime);
+              // });
         });
+          // });
       });
+      // });
     };
 
     if(servoReady){
