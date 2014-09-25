@@ -3,13 +3,13 @@ var servolib = require('servo-pca9685');
 var accel = require('accel-mma84').use(tessel.port['A']);
 var servo = servolib.use(tessel.port['B']);
 
-var startupTime = 800; // 500 < minStartupTime? < 1000 in ms
+var startupTime = 1000; // Using 1000ms to delay rapid startup
 var maxPWM = 0.125; // 
 var minPWM = 0.002; // Exhaustively tested. 
 
 var userSpeedIncrement = 0.05;
 var userMaxSpeed = 0.15;
-var accelThreshold = 0.2;
+var accelThreshold = 0.1;
 
 var servoModuleReady = false;
 var accelModuleReady = false;
@@ -29,7 +29,7 @@ accel.on('ready', function () {
       onModulesReady();
     }
   });
-})
+});
 
 var onModulesReady = function(){
   // Allow user to land immediately
@@ -94,8 +94,8 @@ var balanceAxis = function(axis, accelReading, callback){
       turnOnMotor(posMotor);
     }
     else{ // all off
-      turnOffMotor(posMotor);
-      turnOffMotor(negMotor);
+      turnOnMotor(posMotor);
+      turnOnMotor(negMotor);
     }
   } 
 
