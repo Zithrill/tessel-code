@@ -1,18 +1,35 @@
 var tessel = require('tessel');
 var servolib = require('servo-pca9685');
-var accel = require('accel-mma84').use(tessel.port['A']);
-var servo = servolib.use(tessel.port['B']);
+var accel = require('accel-mma84').use(tessel.port['D']);
+var servo = servolib.use(tessel.port['C']);
 
-var startupTime = 1000; // Using 1000ms to delay rapid startup
-var maxPWM = 0.125; // 
+var startupTime = msBetweenMaxAndMinPWM = msBetweenMinPWMAndCallback = 1000; // Using 1000ms to delay rapid startup
+var maxPWM = 0.125;
 var minPWM = 0.002; // Exhaustively tested. 
 
 var userSpeedIncrement = 0.05;
-var userMaxSpeed = 0.15;
+var testSpeed = 0.01;
+var userMaxSpeed = testSpeed;// 0.4; 
 var accelThreshold = 0.1;
+var whatIsZero = 0; //userMaxSpeed/2;
 
 var servoModuleReady = false;
 var accelModuleReady = false;
+
+var hovering = true;
+var isLanding = false;
+
+//Replicate request from server to set hovering to false
+setTimeout(function(){
+  hovering = false;
+} , 60000)
+
+// Set motors to zero for safety:
+servo.move(1, 0);
+servo.move(2, 0);
+servo.move(3, 0);
+servo.move(4, 0);
+
 
 servo.on('ready', function(){
   servoModuleReady = true;
@@ -38,11 +55,18 @@ var onModulesReady = function(){
     hovering = false;
     console.log('User ordered immediate landing', String(throttle));
   });
-
-  configureMotor(1, hover);
-  configureMotor(2, hover);
-  configureMotor(3, hover);
-  configureMotor(4, hover);
+  setTimeout(function(){
+    configureMotor(1, hover);
+  },1000)
+  setTimeout(function(){
+    configureMotor(2, hover);
+  },2000)
+  setTimeout(function(){
+    configureMotor(3, hover);
+  },3000)
+  setTimeout(function(){
+    configureMotor(4, hover);
+  },4000)
 };
 
 var onMotorsConfigured = function(){}; // ;)
@@ -80,7 +104,7 @@ var turnOnMotor = function(motor){
 };
 
 var turnOffMotor = function(motor){
-  servo.move(motor, 0);
+  servo.move(motor, whatIsZero);
 };
 
 var balanceAxis = function(axis, accelReading, callback){
@@ -99,10 +123,10 @@ var balanceAxis = function(axis, accelReading, callback){
     }
   } 
 
-  if(axis === 'y'){
+  if(axis === 'x'){
     balanceMotors(1,3);
   }
-  if(axis === 'x'){
+  if(axis === 'y'){
     balanceMotors(2,4);
   }
 
@@ -120,14 +144,6 @@ var loopy = function(y){
     hover();
   });
 };
-
-hovering = true;
-var isLanding = false;
-
-//Replicate request from server to set hovering to false
-setTimeout(function(){
-  hovering = false;
-} , 60000)
 
 var hover = function(){
   //Gets accelerometer data from accelerometer (xyz);
@@ -161,19 +177,21 @@ var land = function(){
 var configureMotor = function (servoNumber, callback) {
   console.log('Configuring motor '+servoNumber+'...');
   servo.configure(servoNumber, minPWM, maxPWM , function () {
+    // Set maxPWM
     servo.setDutyCycle(servoNumber, maxPWM, function (err) {
       setTimeout(function(){
+        // Set minPWM
         servo.setDutyCycle(servoNumber, minPWM, function (err) {
           setTimeout(function(){ 
             console.log(servoNumber+': ARMED');
+            // If this is the last motor to arm, have it invoke the callback.
             motors[servoNumber].configured = true;
             if(motors[1].configured && motors[2].configured && motors[3].configured && motors[4].configured){
               callback();
             } 
-            // if all motors configured, do next thing.
-          }, startupTime);
+          }, msBetweenMinPWMAndCallback);
         });
-      }, startupTime);
+      }, msBetweenMaxAndMinPWM);
     });
   });
 };
