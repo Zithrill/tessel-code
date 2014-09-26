@@ -2,10 +2,10 @@
 
 var drone = {
   motors: {
-    1: {speed: function(){}, armed: false, arm: function(){}, liftoffSpeed: null},
-    2: {speed: function(){}, armed: false, arm: function(){}, liftoffSpeed: null},
-    3: {speed: function(){}, armed: false, arm: function(){}, liftoffSpeed: null},
-    4: {speed: function(){}, armed: false, arm: function(){}, liftoffSpeed: null}
+    1: {name: '1', speed: setMotorSpeed, armed: false, arm: armMotor, liftoffSpeed: null},
+    2: {name: '2', speed: setMotorSpeed, armed: false, arm: armMotor, liftoffSpeed: null},
+    3: {name: '3', speed: setMotorSpeed, armed: false, arm: armMotor, liftoffSpeed: null},
+    4: {name: '4', speed: setMotorSpeed, armed: false, arm: armMotor, liftoffSpeed: null}
   },
   accel: {calibrate: function(){}},
   gyro: {calibrate: function(){}},
@@ -18,14 +18,15 @@ var drone = {
 };
 
 // PRE-FLIGHT
-drone.motors[1].speed();
 // Immediately shut off each motor in case it has residual throttle.
-for(var motor in drone.motors){
+console.log('Zero out motors');
+for(motor in drone.motors){
   var motor = drone.motors[motor];
   motor.speed(0); // (If motors aren't armed, this should have no effect.)
 }
 
 // Check and calibrate available sensors.
+console.log('Calibrate sensors.');
 drone.accel.calibrate();
 drone.gyro.calibrate();
 drone.magnetometer.calibrate();
@@ -57,3 +58,13 @@ for(motor in drone.motors){
 // TAKE-OFF
 drone.takeoff();
 drone.hover();
+
+// motor methods
+function setMotorSpeed(speed){
+  console.log(' ',this.name,'speed set to',speed+'.');
+}
+
+function armMotor(){
+  console.log(' ',this.name,'armed.');
+  this.armed = true;
+};

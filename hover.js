@@ -1,3 +1,5 @@
+// try using process.end
+
 var tessel = require('tessel');
 var servolib = require('servo-pca9685');
 var accel = require('accel-mma84').use(tessel.port['D']);
@@ -9,9 +11,9 @@ var minPWM = 0.002; // Exhaustively tested.
 
 var userSpeedIncrement = 0.05;
 var testSpeed = 0.02;
-var userMaxSpeed = testSpeed;// 0.4; 
+var userMaxSpeed = 0.1;//5; //;// 0.4; 
 var accelThreshold = 0.003;
-var whatIsZero = 0.004;
+var whatIsZero = userMaxSpeed/2; //0.004;
 
 var servoModuleReady = false;
 var accelModuleReady = false;
@@ -57,16 +59,16 @@ var onModulesReady = function(){
   });
   setTimeout(function(){
     configureMotor(1, hover);
-  },1000)
+  },1000);
   setTimeout(function(){
     configureMotor(2, hover);
-  },2000)
+  },1500);
   setTimeout(function(){
     configureMotor(3, hover);
-  },3000)
+  },2000);
   setTimeout(function(){
     configureMotor(4, hover);
-  },4000)
+  },2500);
 };
 
 var onMotorsConfigured = function(){}; // ;)
