@@ -83,6 +83,14 @@ var turnOffMotor = function(motor){
   servo.move(motor, 0);
 };
 
+var throttleUp = function(motor, userSpeedIncrement){
+  servo.move(motor, )
+};
+
+var throttleDown = function(motor, userSpeedIncrement){
+
+};
+
 var balanceAxis = function(axis, accelReading, callback){
   var balanceMotors = function(posMotor, negMotor){
     if(accelReading > accelThreshold){
