@@ -1,20 +1,10 @@
 // If no input command is received for about 1 second, f3 f2 is beeped and the ESC returns to disarmed state, waiting for a valid arming signal.
 
 // try using process.end
-var lint = false;
-if(lint){
-  var accel = {
-    on: function(){}
-  };
-  var servo = {
-    move: function(){},
-    on: function(){},
-  };
-} else {
-  var tessel = require('tessel');
-  var accel = require('accel-mma84').use(tessel.port['D']);
-  var servo = require('servo-pca9685').use(tessel.port['C']);
-}
+
+var tessel = require('tessel');
+var accel = require('accel-mma84').use(tessel.port['D']);
+var servo = require('servo-pca9685').use(tessel.port['C']);
 
 // Motor calibrations
 var motors = {
@@ -72,43 +62,46 @@ servo.move(2, 0);
 servo.move(3, 0);
 servo.move(4, 0);
 
-servo.on('ready', function(){
-  isServoModuleReady = true;
-  if(isAccelModuleReady && isServoModuleReady){ 
-    onModulesReady();
-  }
-});
+exports.takeOff = function(){
 
-accel.on('ready', function () {
-  accel.setOutputRate( accelReadsPerSecond, function(err){
-    accel.setScaleRange( accelMaxGs, function(err){
-      isAccelModuleReady = true;
-      if(isAccelModuleReady && isServoModuleReady){ 
-        onModulesReady();
-      }
+  servo.on('ready', function(){
+    isServoModuleReady = true;
+    if(isAccelModuleReady && isServoModuleReady){ 
+      onModulesReady();
+    }
+  });
+
+  accel.on('ready', function () {
+    accel.setOutputRate( accelReadsPerSecond, function(err){
+      accel.setScaleRange( accelMaxGs, function(err){
+        isAccelModuleReady = true;
+        if(isAccelModuleReady && isServoModuleReady){ 
+          onModulesReady();
+        }
+      });
     });
   });
-});
 
-var onModulesReady = function(){
-  // Allow user to land immediately
-  process.stdin.resume();
-  process.stdin.on('data', function (throttle) {
-    isHovering = false;
-    console.log('User ordered immediate landing', String(throttle));
-  });
-  setTimeout(function(){
-    configureMotor(1, hover);
-  },1000);
-  setTimeout(function(){
-    configureMotor(2, hover);
-  },1250);
-  setTimeout(function(){
-    configureMotor(3, hover);
-  },1500);
-  setTimeout(function(){
-    configureMotor(4, hover);
-  },1750);
+  var onModulesReady = function(){
+    // Allow user to land immediately
+    process.stdin.resume();
+    process.stdin.on('data', function (throttle) {
+      isHovering = false;
+      console.log('User ordered immediate landing', String(throttle));
+    });
+    setTimeout(function(){
+      configureMotor(1, hover);
+    },1000);
+    setTimeout(function(){
+      configureMotor(2, hover);
+    },1250);
+    setTimeout(function(){
+      configureMotor(3, hover);
+    },1500);
+    setTimeout(function(){
+      configureMotor(4, hover);
+    },1750);
+  };
 };
 
 // TODO placeholder for optimization.
@@ -132,6 +125,7 @@ var throttleUp = function(motorNumber){
     });
   }
 };
+
 var throttleDown = function(motorNumber){
   var proposedMotorThrottle = motors[motorNumber].throttle-minThrottleIncrement;
   if(proposedMotorThrottle >= 0){
@@ -146,14 +140,6 @@ var throttleDown = function(motorNumber){
       }
     });
   }
-};
-
-var throttleUp = function(motor, userSpeedIncrement){
-  servo.move(motor, )
-};
-
-var throttleDown = function(motor, userSpeedIncrement){
-
 };
 
 var balanceAxis = function(axis, accelReading, callback){
@@ -171,14 +157,12 @@ var balanceAxis = function(axis, accelReading, callback){
       throttleUp(negMotor);
     }
   } 
-
   if(axis === 'x'){
     balanceMotors(1,3);
   }
   if(axis === 'y'){
     balanceMotors(2,4);
   }
-
   callback();
 };
 
@@ -214,7 +198,7 @@ var hover = function(){
   });
 };
 
-var land = function(){
+exports.land = function(){
   isLanding = true;
   servo.move(1, 0);
   servo.move(2, 0);
