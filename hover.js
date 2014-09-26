@@ -1,11 +1,20 @@
 // If no input command is received for about 1 second, f3 f2 is beeped and the ESC returns to disarmed state, waiting for a valid arming signal.
 
 // try using process.end
-
-var tessel = require('tessel');
-var servolib = require('servo-pca9685');
-var accel = require('accel-mma84').use(tessel.port['D']);
-var servo = servolib.use(tessel.port['C']);
+var lint = false;
+if(lint){
+  var accel = {
+    on: function(){}
+  };
+  var servo = {
+    move: function(){},
+    on: function(){},
+  };
+} else {
+  var tessel = require('tessel');
+  var accel = require('accel-mma84').use(tessel.port['D']);
+  var servo = require('servo-pca9685').use(tessel.port['C']);
+}
 
 // Motor calibrations
 var motors = {
@@ -39,12 +48,13 @@ var startupTime = msBetweenMaxAndMinPWM = msBetweenMinPWMAndCallback = 1000; // 
 var maxPWM = 0.125;
 var minPWM = 0.002; // Exhaustively tested. 
 
-var userSetMaxThrottle = 0.5;
-var minThrottleIncrement = 0.01;
+var userSetMaxThrottle = 0.60;
+var minThrottleIncrement = 0.02;
+var maxOpposedThrottlesDifference = 0.10;
 var motorMaxThrottle = userSetMaxThrottle; 
 
 // Sensor Calibrations
-var accelMaxGs = 2; // possible values: 2 4 8
+var accelMaxGs = 2; // in g's, possible values: 2 4 8
 var accelThresholdBeforeBalancing = 0.03;
 var accelReadsPerSecond = 250;
 
@@ -102,22 +112,39 @@ var onModulesReady = function(){
 };
 
 // TODO placeholder for optimization.
-var onMotorsConfigured = function(){}; // ;)
+// var onMotorsConfigured = function(){}; // ;)
+
+// TODO consider as additional balancing measure.
+// var checkMotorsArentTooFarApart = function(motor){}
 
 var throttleUp = function(motorNumber){
   var proposedMotorThrottle = motors[motorNumber].throttle+minThrottleIncrement;
   if(proposedMotorThrottle <= motorMaxThrottle){
-    console.log(motorNumber+': '+proposedMotorThrottle);
-    servo.move(motorNumber, proposedMotorThrottle);
-    motors[motorNumber].throttle = proposedMotorThrottle;
+    var timeMotorThrottleChangeIssued = new Date().getTime();
+    servo.move(motorNumber, proposedMotorThrottle, function(err){
+      var timeMotorThrottleChangeCompleted = new Date().getTime();
+      var timeToIssueThrottleChange =timeMotorThrottleChangeCompleted-timeMotorThrottleChangeIssued;
+      if(err){console.log(timeToIssueThrottleChange,motorNumber,err);}
+      else{
+        if(true){console.log(motorNumber+' ^ '+proposedMotorThrottle, timeToIssueThrottleChange);}
+        motors[motorNumber].throttle = proposedMotorThrottle;
+      }
+    });
   }
 };
 var throttleDown = function(motorNumber){
   var proposedMotorThrottle = motors[motorNumber].throttle-minThrottleIncrement;
-  if(propesedMotorThrottle >= 0){
-    console.log(motorNumber+': '+proposedMotorThrottle);
-    servo.move(motorNumber, proposedMotorThrottle);
-    motors[motorNumber].throttle = proposedMotorThrottle;
+  if(proposedMotorThrottle >= 0){
+    var timeMotorThrottleChangeIssued = new Date().getTime(); //nanoseconds
+    servo.move(motorNumber, proposedMotorThrottle, function(err){
+      var timeMotorThrottleChangeCompleted = new Date().getTime();
+      var timeToIssueThrottleChange =timeMotorThrottleChangeCompleted-timeMotorThrottleChangeIssued;
+      if(err){console.log(timeToIssueThrottleChange,motorNumber,err);}
+      else{
+        if(true){console.log(motorNumber+' v '+proposedMotorThrottle, timeToIssueThrottleChange);}
+        motors[motorNumber].throttle = proposedMotorThrottle;
+      }
+    });
   }
 };
 
