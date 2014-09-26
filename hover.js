@@ -1,3 +1,5 @@
+// If no input command is received for about 1 second, f3 f2 is beeped and the ESC returns to disarmed state, waiting for a valid arming signal.
+
 // try using process.end
 
 var tessel = require('tessel');
@@ -43,8 +45,8 @@ var motorMaxThrottle = userSetMaxThrottle;
 
 // Sensor Calibrations
 var accelMaxGs = 2; // possible values: 2 4 8
-var accelThresholdBeforeBalancing = 0.003;
-var accelReadsPerSecond = 100;
+var accelThresholdBeforeBalancing = 0.03;
+var accelReadsPerSecond = 250;
 
 var whatIsZero = motorMaxThrottle/2; //0.004;
 
@@ -90,13 +92,13 @@ var onModulesReady = function(){
   },1000);
   setTimeout(function(){
     configureMotor(2, hover);
-  },1500);
+  },1250);
   setTimeout(function(){
     configureMotor(3, hover);
-  },2000);
+  },1500);
   setTimeout(function(){
     configureMotor(4, hover);
-  },2500);
+  },1750);
 };
 
 // TODO placeholder for optimization.
@@ -105,14 +107,18 @@ var onMotorsConfigured = function(){}; // ;)
 var throttleUp = function(motorNumber){
   var proposedMotorThrottle = motors[motorNumber].throttle+minThrottleIncrement;
   if(proposedMotorThrottle <= motorMaxThrottle){
+    console.log(motorNumber+': '+proposedMotorThrottle);
     servo.move(motorNumber, proposedMotorThrottle);
     motors[motorNumber].throttle = proposedMotorThrottle;
   }
 };
 var throttleDown = function(motorNumber){
   var proposedMotorThrottle = motors[motorNumber].throttle-minThrottleIncrement;
-  servo.move(motorNumber, proposedMotorThrottle);
-  motors[motorNumber].throttle = proposedMotorThrottle;
+  if(propesedMotorThrottle >= 0){
+    console.log(motorNumber+': '+proposedMotorThrottle);
+    servo.move(motorNumber, proposedMotorThrottle);
+    motors[motorNumber].throttle = proposedMotorThrottle;
+  }
 };
 
 var balanceAxis = function(axis, accelReading, callback){
