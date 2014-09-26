@@ -8,10 +8,10 @@ var maxPWM = 0.125;
 var minPWM = 0.002; // Exhaustively tested. 
 
 var userSpeedIncrement = 0.05;
-var testSpeed = 0.01;
+var testSpeed = 0.02;
 var userMaxSpeed = testSpeed;// 0.4; 
-var accelThreshold = 0.1;
-var whatIsZero = 0; //userMaxSpeed/2;
+var accelThreshold = 0.003;
+var whatIsZero = 0.004;
 
 var servoModuleReady = false;
 var accelModuleReady = false;
