@@ -2,10 +2,10 @@
 
 var drone = {
   motors: {
-    1: {name: '1', speed: setMotorSpeed, armed: false, arm: armMotor, liftoffSpeed: null},
-    2: {name: '2', speed: setMotorSpeed, armed: false, arm: armMotor, liftoffSpeed: null},
-    3: {name: '3', speed: setMotorSpeed, armed: false, arm: armMotor, liftoffSpeed: null},
-    4: {name: '4', speed: setMotorSpeed, armed: false, arm: armMotor, liftoffSpeed: null}
+    1: {name: '1', throttle: setMotorThrottle, armed: false, arm: armMotor, liftoffThrottle: null},
+    2: {name: '2', throttle: setMotorThrottle, armed: false, arm: armMotor, liftoffThrottle: null},
+    3: {name: '3', throttle: setMotorThrottle, armed: false, arm: armMotor, liftoffThrottle: null},
+    4: {name: '4', throttle: setMotorThrottle, armed: false, arm: armMotor, liftoffThrottle: null}
   },
   accel: {calibrate: function(){}},
   gyro: {calibrate: function(){}},
@@ -22,7 +22,7 @@ var drone = {
 console.log('Zero out motors');
 for(motor in drone.motors){
   var motor = drone.motors[motor];
-  motor.speed(0); // (If motors aren't armed, this should have no effect.)
+  motor.throttle(0); // (If motors aren't armed, this should have no effect.)
 }
 
 // Check and calibrate available sensors.
@@ -45,12 +45,12 @@ for(motor in drone.motors){
   var motor = drone.motors[motor];
   var increase = 0;
   while(drone.accel.level){
-    motor.speed(increase);
-    increase += speedIncrement;
+    motor.throttle(increase);
+    increase += throttleIncrement;
   }
-  motor.liftoffSpeed = increase;
-  // Compare that speed to known liftoff to determine throttle % mapping?
-  motor.speed(0);
+  motor.liftoffThrottle = increase;
+  // Compare that throttle to known liftoff to determine throttle % mapping?
+  motor.throttle(0);
 }
 
 // Results: sensors and motors calibrated and armed, all throttles at 0. 
@@ -60,11 +60,11 @@ drone.takeoff();
 drone.hover();
 
 // motor methods
-function setMotorSpeed(speed){
-  console.log(' ',this.name,'speed set to',speed+'.');
+function setMotorThrottle(throttle){
+  console.log(' ',this.name,'throttle set to',throttle+'.');
 }
 
 function armMotor(){
   console.log(' ',this.name,'armed.');
   this.armed = true;
-};
+}; 
