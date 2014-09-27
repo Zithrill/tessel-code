@@ -21,7 +21,7 @@ var msBetweenMinPWMAndCallback = 1000;
 var maxPWM = 0.125;
 var minPWM = 0.002; // Exhaustively tested. 
 
-var motorMaxThrottle = 0.05; 
+var motorMaxThrottle = 0.4; 
 var minThrottleIncrement = 0.02;
 var maxThrottleDifference = 0.1;
 
@@ -82,8 +82,6 @@ var motors = {
     arm: arm,
     armed: false
   }
-  lowestMotorThrottle: null;
-  highestMotorThrottle: null;
 };
 motors[1].oppositeMotor = motors[3];
 motors[2].oppositeMotor = motors[4];
@@ -159,12 +157,10 @@ accel.on('ready', function () {
 var onModulesReady = function(){
   log(colorGreen+'    '+checkMark,'All Tessel modules ready.',colorWhite);
   log('  2.Arming motors:');
-  // setTimeout(function(){
-    motors[1].arm();
-    motors[2].arm();
-    motors[3].arm();
-    motors[4].arm();
-  // },1000);
+  motors[1].arm();
+  motors[4].arm();
+  motors[3].arm();
+  motors[2].arm();
 };
 
 var onMotorsArmed = function(){
