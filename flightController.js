@@ -23,7 +23,7 @@ var minPWM = 0.002; // Exhaustively tested.
 
 var motorMaxThrottle = 0.05; 
 var minThrottleIncrement = 0.02;
-// var maxDifferenceBetweenAxes = 0.1;
+var maxThrottleDifference = 0.1;
 
 // Sensor Calibrations
 var accelMaxGs = 2; // in g's, possible values: 2 4 8
@@ -82,6 +82,8 @@ var motors = {
     arm: arm,
     armed: false
   }
+  lowestMotorThrottle: null;
+  highestMotorThrottle: null;
 };
 motors[1].oppositeMotor = motors[3];
 motors[2].oppositeMotor = motors[4];
@@ -116,10 +118,17 @@ function arm() {
 // e.g. motors[1].setThrottle(.2);
 function setThrottle(throttle){
   //TODO 'this' probably not correct.
-  servo.move(this.number, throttle, function(err){
-    this.currentThrottle = throttle;
-    staticLog(motors[1].currentThrottle, motors[2].currentThrottle, motors[3].currentThrottle, motors[4].currentThrottle);
-  });
+  var motor = this;
+  var previousThrottle = motor.currentThrottle;
+  motor.currentThrottle = throttle;
+  if(Math.max(motors[1].currentThrottle, motors[2].currentThrottle, motors[3].currentThrottle, motors[4].currentThrottle) - Math.min(motors[1].currentThrottle, motors[2].currentThrottle, motors[3].currentThrottle, motors[4].currentThrottle) <= maxThrottleDifference){
+    servo.move(this.number, throttle, function(err){
+      motor.currentThrottle = throttle;
+      staticLog(motors[1].currentThrottle, motors[2].currentThrottle, motors[3].currentThrottle, motors[4].currentThrottle);
+    });
+  } else {
+    motor.currentThrottle = previousThrottle;
+  }
 }
 
 // ###############################
@@ -172,6 +181,8 @@ var preflightComplete = function(){
 // ###############################
 // HOVER
 // ###############################
+
+
 var throttleUp = function(motorNumber){
   var motor = motors[motorNumber];
   var proposedMotorThrottle = motors[motorNumber].currentThrottle+minThrottleIncrement;
@@ -179,6 +190,9 @@ var throttleUp = function(motorNumber){
     motor.setThrottle(proposedMotorThrottle);
   }
 };
+
+
+
 var throttleDown = function(motorNumber){
   var motor = motors[motorNumber];
   var proposedMotorThrottle = motor.currentThrottle-minThrottleIncrement;
@@ -197,13 +211,11 @@ var balanceAxis = function(axis, accelReading, callback){
       throttleDown(negMotor);
       throttleUp(posMotor);
     }
-    else{ //if(Math.abs(evenAxisAverageThrottle-oddAxisAverageThrottle) < maxDifferenceBetweenAxes){ // when balanced, increase throttles to max.
+    else{
       throttleUp(posMotor);
       throttleUp(negMotor);
     }
   } 
-  // var oddAxisAverageThrottle = (motors[1].throttle+motors[3].throttle)/2;
-  // var evenAxisAverageThrottle = (motors[2].throttle+motors[4].throttle)/2;
 
   if(axis === 'x'){
     balanceMotors(1,3);
