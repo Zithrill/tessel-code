@@ -1,42 +1,31 @@
-// If no input command is received for about 1 second, f3 f2 is beeped and the ESC returns to disarmed state, waiting for a valid arming signal.
+var tessel = require('tessel');
+var accel = require('accel-mma84').use(tessel.port['D']);
+var servo = require('servo-pca9685').use(tessel.port['C']);
 
+// If no input command is received for about 1 second, f3 f2 is beeped and the ESC returns to disarmed state, waiting for a valid arming signal.
 // try using process.end
-var lint = false;
-if(lint){
-  var accel = {
-    on: function(){}
-  };
-  var servo = {
-    move: function(){},
-    on: function(){},
-  };
-} else {
-  var tessel = require('tessel');
-  var accel = require('accel-mma84').use(tessel.port['D']);
-  var servo = require('servo-pca9685').use(tessel.port['C']);
-}
 
 // Motor calibrations
 var motors = {
   1: {
     motor: 1,
     throttle: 0,
-    configured: false
+    armed: false
   },
   2: {
     motor: 2,
     throttle: 0,
-    configured: false
+    armed: false
   },
   3: {
     motor: 3,
     throttle: 0,
-    configured: false
+    armed: false
   },
   4: {
     motor: 4,
     throttle: 0,
-    configured: false
+    armed: false
   }
 };
 motors['1'].oppositeMotor = motors['3'];
@@ -50,7 +39,6 @@ var minPWM = 0.002; // Exhaustively tested.
 
 var userSetMaxThrottle = 0.60;
 var minThrottleIncrement = 0.02;
-var maxOpposedThrottlesDifference = 0.10;
 var motorMaxThrottle = userSetMaxThrottle; 
 
 // Sensor Calibrations
@@ -58,26 +46,29 @@ var accelMaxGs = 2; // in g's, possible values: 2 4 8
 var accelThresholdBeforeBalancing = 0.03;
 var accelReadsPerSecond = 250;
 
-var whatIsZero = motorMaxThrottle/2; //0.004;
-
 // Control flow variables
 var isServoModuleReady = false;
 var isAccelModuleReady = false;
 var isHovering = true;
 var isLanding = false;
 
-// Set motors to zero for safety:
-servo.move(1, 0);
-servo.move(2, 0);
-servo.move(3, 0);
-servo.move(4, 0);
+// servo.setModuleFrequency(0, function(err){
+  // console.log('servo.setModuleFrequency 0',err);
+  servo.on('ready', function(){
+    console.log('servo ready');
+    // Set motors to zero for safety:
+    // try setting module freq to zero to start
+    // setTimeout(function(){servo.move(4, 0);},100);
+    // setTimeout(function(){servo.move(3, 0);},200);
+    // setTimeout(function(){servo.move(2, 0);},300);
+    // setTimeout(function(){servo.move(1, 0);},400);
 
-servo.on('ready', function(){
-  isServoModuleReady = true;
-  if(isAccelModuleReady && isServoModuleReady){ 
-    onModulesReady();
-  }
-});
+    isServoModuleReady = true;
+    if(isAccelModuleReady && isServoModuleReady){ 
+      onModulesReady();
+    }
+  });
+// }); // from setModFreq
 
 accel.on('ready', function () {
   accel.setOutputRate( accelReadsPerSecond, function(err){
@@ -91,59 +82,70 @@ accel.on('ready', function () {
 });
 
 var onModulesReady = function(){
-  // Allow user to land immediately
-  process.stdin.resume();
-  process.stdin.on('data', function (throttle) {
-    isHovering = false;
-    console.log('User ordered immediate landing', String(throttle));
-  });
-  setTimeout(function(){
-    configureMotor(1, hover);
-  },1000);
-  setTimeout(function(){
-    configureMotor(2, hover);
-  },1250);
-  setTimeout(function(){
-    configureMotor(3, hover);
-  },1500);
-  setTimeout(function(){
-    configureMotor(4, hover);
-  },1750);
+  // process.stdin.resume();
+  // currentQuestion = 'Are motors already armed from previous test?'; 
+  // console.log(currentQuestion,'[y/n]');
+  // process.stdin.on('data', function (userInput) {
+    // servo.setModuleFrequency(50, function(err){ console.log('servo.setModuleFrequency 50 (default)',err) };
+
+    // if(false){//'y' === String(userInput)[0] && currentQuestion === 'Are motors already armed from previous test?'){
+      // onMotorsArmed();
+    // } else{// if('n' === String(userInput)[0] && currentQuestion === 'Are motors already armed from previous test?'){
+      setTimeout(function(){
+        armMotor(1);
+      },1000);
+      setTimeout(function(){
+        armMotor(2);
+      },1250);
+      setTimeout(function(){
+        armMotor(3);
+      },1500);
+      setTimeout(function(){
+        armMotor(4);
+      },1500);
+    // }
+  // });
 };
 
-// TODO placeholder for optimization.
-// var onMotorsConfigured = function(){}; // ;)
+var onMotorsArmed = function(){
+  console.log('All motors armed.');
+  hover();
+};
 
-// TODO consider as additional balancing measure.
-// var checkMotorsArentTooFarApart = function(motor){}
-
+// Hover code:
 var throttleUp = function(motorNumber){
   var proposedMotorThrottle = motors[motorNumber].throttle+minThrottleIncrement;
   if(proposedMotorThrottle <= motorMaxThrottle){
-    var timeMotorThrottleChangeIssued = new Date().getTime();
+    // var timeMotorThrottleChangeIssued = new Date().getTime();
     servo.move(motorNumber, proposedMotorThrottle, function(err){
-      var timeMotorThrottleChangeCompleted = new Date().getTime();
-      var timeToIssueThrottleChange =timeMotorThrottleChangeCompleted-timeMotorThrottleChangeIssued;
-      if(err){console.log(timeToIssueThrottleChange,motorNumber,err);}
-      else{
-        if(true){console.log(motorNumber+' ^ '+proposedMotorThrottle, timeToIssueThrottleChange);}
-        motors[motorNumber].throttle = proposedMotorThrottle;
-      }
+     //  var timeMotorThrottleChangeCompleted = new Date().getTime();
+     //  var timeToIssueThrottleChange =timeMotorThrottleChangeCompleted-timeMotorThrottleChangeIssued;
+     //  if(err){console.log(timeToIssueThrottleChange,motorNumber,err);}
+     //  else{
+     //    // if left in to allow single motor logging.
+     //    motors[motorNumber].throttle = proposedMotorThrottle;
+     //    if(motorNumber !== 0){console.log(motorNumber+' ^ '+proposedMotorThrottle, timeToIssueThrottleChange, 'ms');}
+     //  }
+     // }*/
+      motors[motorNumber].throttle = proposedMotorThrottle;
+      console.log(motorNumber+' ^ '+proposedMotorThrottle);
     });
   }
 };
 var throttleDown = function(motorNumber){
   var proposedMotorThrottle = motors[motorNumber].throttle-minThrottleIncrement;
   if(proposedMotorThrottle >= 0){
-    var timeMotorThrottleChangeIssued = new Date().getTime(); //nanoseconds
+    // var timeMotorThrottleChangeIssued = new Date().getTime();
     servo.move(motorNumber, proposedMotorThrottle, function(err){
-      var timeMotorThrottleChangeCompleted = new Date().getTime();
-      var timeToIssueThrottleChange =timeMotorThrottleChangeCompleted-timeMotorThrottleChangeIssued;
-      if(err){console.log(timeToIssueThrottleChange,motorNumber,err);}
-      else{
-        if(true){console.log(motorNumber+' v '+proposedMotorThrottle, timeToIssueThrottleChange);}
-        motors[motorNumber].throttle = proposedMotorThrottle;
-      }
+      // var timeMotorThrottleChangeCompleted = new Date().getTime();
+      // var timeToIssueThrottleChange =timeMotorThrottleChangeCompleted-timeMotorThrottleChangeIssued;
+      // if(err){console.log(timeToIssueThrottleChange,motorNumber,err);}
+      // else{
+      //   // if left in to allow single motor logging.
+      //   if(motorNumber !== 0){console.log(motorNumber+' v '+proposedMotorThrottle, timeToIssueThrottleChange, 'ms');}
+      motors[motorNumber].throttle = proposedMotorThrottle;
+      console.log(motorNumber+' v '+proposedMotorThrottle);
+      // }
     });
   }
 };
@@ -215,7 +217,7 @@ var land = function(){
   console.log('Landed. All motors should be off.');
 };
 
-var configureMotor = function (servoNumber, callback) {
+var armMotor = function (servoNumber) {
   console.log('Configuring motor '+servoNumber+'...');
   servo.configure(servoNumber, minPWM, maxPWM , function () {
     // Set maxPWM
@@ -226,9 +228,9 @@ var configureMotor = function (servoNumber, callback) {
           setTimeout(function(){ 
             console.log(servoNumber+': ARMED');
             // If this is the last motor to arm, have it invoke the callback.
-            motors[servoNumber].configured = true;
-            if(motors[1].configured && motors[2].configured && motors[3].configured && motors[4].configured){
-              callback();
+            motors[servoNumber].armed = true;
+            if(motors[1].armed && motors[2].armed && motors[3].armed && motors[4].armed){
+              onMotorsArmed();
             } 
           }, msBetweenMinPWMAndCallback);
         });
