@@ -37,9 +37,10 @@ var startupTime = msBetweenMaxAndMinPWM = msBetweenMinPWMAndCallback = 1000; // 
 var maxPWM = 0.125;
 var minPWM = 0.002; // Exhaustively tested. 
 
-var userSetMaxThrottle = 0.60;
-var minThrottleIncrement = 0.02;
+var userSetMaxThrottle = 0.05; // 5%
+var minThrottleIncrement = 0.002;
 var motorMaxThrottle = userSetMaxThrottle; 
+var maxDifferenceBetweenAxes = 0.1;
 
 // Sensor Calibrations
 var accelMaxGs = 2; // in g's, possible values: 2 4 8
@@ -160,11 +161,13 @@ var balanceAxis = function(axis, accelReading, callback){
       throttleDown(negMotor);
       throttleUp(posMotor);
     }
-    else{ // when balanced, increase throttles to max.
+    else if(Math.abs(evenAxisAverageThrottle-oddAxisAverageThrottle) < maxDifferenceBetweenAxes){ // when balanced, increase throttles to max.
       throttleUp(posMotor);
       throttleUp(negMotor);
     }
   } 
+  var oddAxisAverageThrottle = (motors[1].throttle+motors[3].throttle)/2;
+  var evenAxisAverageThrottle = (motors[2].throttle+motors[4].throttle)/2;
 
   if(axis === 'x'){
     balanceMotors(1,3);
