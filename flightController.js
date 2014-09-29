@@ -2,8 +2,19 @@
 // NOTES
 /* ###############################
 
-If no input command is received for about 1 second, f3 f2 is beeped and the ESC returns to disarmed state, waiting for a valid arming signal.
-try using process.end
+- If no input command is received for about 1 second, f3 f2 is beeped and the ESC returns to disarmed state, waiting for a valid arming signal.
+
+- Try using process.end
+
+- Disconnect battery for at least 10s between flights to let ESCs discharge capacitors.
+
+- Try making motors arm one at a time slow enough for a human to hear errors. 4x|: f1 . f1 f1 f3 :|
+
+- Increase throttle increment 0.05.
+
+- Increase accelerometer threshold to 0.06.
+
+- Balance the hardware (#3 heavy).
 
 *///##############################
 // REQUIREMENTS
@@ -21,9 +32,9 @@ var msBetweenMinPWMAndCallback = 1000;
 var maxPWM = 0.125;
 var minPWM = 0.002; // Exhaustively tested. 
 
-var motorMaxThrottle = 0.05; 
+var motorMaxThrottle = 0.4; 
 var minThrottleIncrement = 0.02;
-// var maxDifferenceBetweenAxes = 0.1;
+var maxThrottleDifference = 0.1;
 
 // Sensor Calibrations
 var accelMaxGs = 2; // in g's, possible values: 2 4 8
@@ -40,15 +51,16 @@ var isLanding = false;
 var colorGreen = '\033[92m';
 var checkMark = '\u2714';
 var colorRed = '\033[91m';
-var colorWhite = '\033[97m';
+var colorWhite = '' //'\033[97m';
 var log = console.log;
-var staticLog = function(infoOn1, infoOn2, infoOn3, infoOn4){
+var staticLog = function(motor1, motor2, motor3, motor4){
   process.stdout.write('\u001B[2J\u001B[0;0f'
     +'Motor throttles:\n'
-    +'1: '+infoOn1+'\n'
-    +'2: '+infoOn2+'\n'
-    +'3: '+infoOn3+'\n'
-    +'4: '+infoOn4
+    +'1: '+motor1.toFixed(3)+'\n'
+    +'2: '+motor2.toFixed(3)+'\n'
+    +'3: '+motor3.toFixed(3)+'\n'
+    +'4: '+motor4.toFixed(3)+'\n'
+    +'A: '+((motor1+motor2+motor3+motor4)/4).toFixed(3)
   );
 };
 
@@ -116,10 +128,17 @@ function arm() {
 // e.g. motors[1].setThrottle(.2);
 function setThrottle(throttle){
   //TODO 'this' probably not correct.
-  servo.move(this.number, throttle, function(err){
-    this.currentThrottle = throttle;
-    staticLog(motors[1].currentThrottle, motors[2].currentThrottle, motors[3].currentThrottle, motors[4].currentThrottle);
-  });
+  var motor = this;
+  var previousThrottle = motor.currentThrottle;
+  motor.currentThrottle = throttle;
+  if(Math.max(motors[1].currentThrottle, motors[2].currentThrottle, motors[3].currentThrottle, motors[4].currentThrottle) - Math.min(motors[1].currentThrottle, motors[2].currentThrottle, motors[3].currentThrottle, motors[4].currentThrottle) <= maxThrottleDifference){
+    servo.move(this.number, throttle, function(err){
+      motor.currentThrottle = throttle;
+      staticLog(motors[1].currentThrottle, motors[2].currentThrottle, motors[3].currentThrottle, motors[4].currentThrottle);
+    });
+  } else {
+    motor.currentThrottle = previousThrottle;
+  }
 }
 
 // ###############################
@@ -150,12 +169,10 @@ accel.on('ready', function () {
 var onModulesReady = function(){
   log(colorGreen+'    '+checkMark,'All Tessel modules ready.',colorWhite);
   log('  2.Arming motors:');
-  // setTimeout(function(){
-    motors[1].arm();
-    motors[2].arm();
-    motors[3].arm();
-    motors[4].arm();
-  // },1000);
+  motors[1].arm();
+  motors[4].arm();
+  motors[3].arm();
+  motors[2].arm();
 };
 
 var onMotorsArmed = function(){
@@ -172,6 +189,8 @@ var preflightComplete = function(){
 // ###############################
 // HOVER
 // ###############################
+
+
 var throttleUp = function(motorNumber){
   var motor = motors[motorNumber];
   var proposedMotorThrottle = motors[motorNumber].currentThrottle+minThrottleIncrement;
@@ -179,6 +198,9 @@ var throttleUp = function(motorNumber){
     motor.setThrottle(proposedMotorThrottle);
   }
 };
+
+
+
 var throttleDown = function(motorNumber){
   var motor = motors[motorNumber];
   var proposedMotorThrottle = motor.currentThrottle-minThrottleIncrement;
@@ -197,13 +219,11 @@ var balanceAxis = function(axis, accelReading, callback){
       throttleDown(negMotor);
       throttleUp(posMotor);
     }
-    else{ //if(Math.abs(evenAxisAverageThrottle-oddAxisAverageThrottle) < maxDifferenceBetweenAxes){ // when balanced, increase throttles to max.
+    else{
       throttleUp(posMotor);
       throttleUp(negMotor);
     }
   } 
-  // var oddAxisAverageThrottle = (motors[1].throttle+motors[3].throttle)/2;
-  // var evenAxisAverageThrottle = (motors[2].throttle+motors[4].throttle)/2;
 
   if(axis === 'x'){
     balanceMotors(1,3);
