@@ -2,8 +2,19 @@
 // NOTES
 /* ###############################
 
-If no input command is received for about 1 second, f3 f2 is beeped and the ESC returns to disarmed state, waiting for a valid arming signal.
-try using process.end
+- If no input command is received for about 1 second, f3 f2 is beeped and the ESC returns to disarmed state, waiting for a valid arming signal.
+
+- Try using process.end
+
+- Disconnect battery for at least 10s between flights to let ESCs discharge capacitors.
+
+- Try making motors arm one at a time slow enough for a human to hear errors. 4x|: f1 . f1 f1 f3 :|
+
+- Increase throttle increment 0.05.
+
+- Increase accelerometer threshold to 0.06.
+
+- Balance the hardware (#3 heavy).
 
 *///##############################
 // REQUIREMENTS
@@ -40,15 +51,16 @@ var isLanding = false;
 var colorGreen = '\033[92m';
 var checkMark = '\u2714';
 var colorRed = '\033[91m';
-var colorWhite = '\033[97m';
+var colorWhite = '' //'\033[97m';
 var log = console.log;
-var staticLog = function(infoOn1, infoOn2, infoOn3, infoOn4){
+var staticLog = function(motor1, motor2, motor3, motor4){
   process.stdout.write('\u001B[2J\u001B[0;0f'
     +'Motor throttles:\n'
-    +'1: '+infoOn1+'\n'
-    +'2: '+infoOn2+'\n'
-    +'3: '+infoOn3+'\n'
-    +'4: '+infoOn4
+    +'1: '+motor1.toFixed(3)+'\n'
+    +'2: '+motor2.toFixed(3)+'\n'
+    +'3: '+motor3.toFixed(3)+'\n'
+    +'4: '+motor4.toFixed(3)+'\n'
+    +'A: '+((motor1+motor2+motor3+motor4)/4).toFixed(3)
   );
 };
 
