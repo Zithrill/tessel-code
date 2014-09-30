@@ -33,12 +33,12 @@ var maxPWM = 0.125;
 var minPWM = 0.002; // Exhaustively tested. 
 
 var motorMaxThrottle = 0.4; 
-var minThrottleIncrement = 0.02;
-var maxThrottleDifference = 0.1;
+var minThrottleIncrement = 0.01;
+var maxThrottleDifference = 0.05;
 
 // Sensor Calibrations
 var accelMaxGs = 2; // in g's, possible values: 2 4 8
-var accelThresholdBeforeBalancing = 0.03;
+var accelThresholdBeforeBalancing = 0.06;
 var accelReadsPerSecond = 250;
 
 // Control flow variables
@@ -144,14 +144,16 @@ function setThrottle(throttle){
 // ###############################
 // PRE-FLIGHT
 // ###############################
+var duty1 = [0.125, 0.002, 0.005].reverse();
+var duty2 = [0.125, 0.002, 0.005].reverse();
+var duty3 = [0.125, 0.002, 0.005].reverse();
+var duty4 = [0.125, 0.002, 0.005].reverse();
+
 log('Pre-flight checklist:')
 log(' 1.Calibrating modules:')
 servo.on('ready', function(){
   log('    Servo module ready.')
   isServoModuleReady = true;
-  if(isAccelModuleReady && isServoModuleReady){ 
-    onModulesReady();
-  }
 });
 
 accel.on('ready', function () {
@@ -159,21 +161,72 @@ accel.on('ready', function () {
   accel.setOutputRate( accelReadsPerSecond, function(err){
     accel.setScaleRange( accelMaxGs, function(err){
       isAccelModuleReady = true;
-      if(isAccelModuleReady && isServoModuleReady){ 
-        onModulesReady();
-      }
+  //     if(isAccelModuleReady && isServoModuleReady){ 
+  //       // onModulesReady();
+
+  //       //DON'T FUCKING CHANGE THIS, LUBY
+  //       process.stdin.resume();
+  //       servo.on('ready', function () {
+  //         servo.configure(1, 0, 1, function(){
+  //           process.stdin.on('data', function () {
+  //             servo.move(1, duty1.pop());
+  //             servo.configure(2, 0, 1, function(){
+  //               servo.move(2, duty2.pop());
+  //             });
+  //             servo.configure(3, 0, 1, function(){
+  //               servo.move(3, duty3.pop());
+  //             });
+  //             servo.configure(4, 0, 1, function(){
+  //               servo.move(4, duty4.pop());
+  //               onMotorsArmed();
+  //             });
+  //           });
+  //         });
+  //       });
+  //     }
     });
   });
 });
 
-var onModulesReady = function(){
-  log(colorGreen+'    '+checkMark,'All Tessel modules ready.',colorWhite);
-  log('  2.Arming motors:');
-  motors[1].arm();
-  motors[4].arm();
-  motors[3].arm();
-  motors[2].arm();
+var checkModules = function(){
+  setImmediate(function(){
+    if(isAccelModuleReady && isServoModuleReady){ 
+      // onModulesReady();
+      //DON'T FUCKING CHANGE THIS, LUBY
+      process.stdin.resume();
+      // servo.on('ready', function () {
+        servo.configure(1, 0, 1, function(){
+          process.stdin.on('data', function () {
+            servo.move(1, duty1.pop());
+            servo.configure(2, 0, 1, function(){
+              servo.move(2, duty2.pop());
+            });
+            servo.configure(3, 0, 1, function(){
+              servo.move(3, duty3.pop());
+            });
+            servo.configure(4, 0, 1, function(){
+              servo.move(4, duty4.pop());
+              // onMotorsArmed();
+            });
+          });
+        });
+      // });    
+    } else {
+      checkModules();
+    }
+  })
 };
+
+checkModules();
+
+// var onModulesReady = function(){
+//   log(colorGreen+'    '+checkMark,'All Tessel modules ready.',colorWhite);
+//   log('  2.Arming motors:');
+//   // motors[4].arm();
+//   // motors[1].arm();
+//   // motors[2].arm();
+//   // motors[3].arm();
+// };
 
 var onMotorsArmed = function(){
   log(colorGreen+'    '+checkMark,'All motors armed.',colorWhite);
