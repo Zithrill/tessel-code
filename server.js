@@ -114,16 +114,18 @@ var takeOff = function(){
   var throttleUp = function(motorNumber){
     var proposedMotorThrottle = motors[motorNumber].throttle+minThrottleIncrement;
     if(proposedMotorThrottle <= motorMaxThrottle){
-      var timeMotorThrottleChangeIssued = new Date().getTime();
-      servo.move(motorNumber, proposedMotorThrottle, function(err){
-        var timeMotorThrottleChangeCompleted = new Date().getTime();
-        var timeToIssueThrottleChange =timeMotorThrottleChangeCompleted-timeMotorThrottleChangeIssued;
-        if(err){console.log(timeToIssueThrottleChange,motorNumber,err);}
-        else{
-          if(true){console.log(motorNumber+' ^ '+proposedMotorThrottle, timeToIssueThrottleChange);}
-          motors[motorNumber].throttle = proposedMotorThrottle;
-        }
-      });
+      // var timeMotorThrottleChangeIssued = new Date().getTime();
+      servo.move(motorNumber, userSetMaxThrottle
+        // , function(err){
+        // var timeMotorThrottleChangeCompleted = new Date().getTime();
+        // var timeToIssueThrottleChange =timeMotorThrottleChangeCompleted-timeMotorThrottleChangeIssued;
+        // if(err){console.log(timeToIssueThrottleChange,motorNumber,err);}
+        // else{
+        //   if(true){console.log(motorNumber+' ^ '+proposedMotorThrottle, timeToIssueThrottleChange);}
+        //   motors[motorNumber].throttle = proposedMotorThrottle;
+        // }
+      // }
+      );
     }
   };
 
@@ -131,15 +133,17 @@ var takeOff = function(){
     var proposedMotorThrottle = motors[motorNumber].throttle-minThrottleIncrement;
     if(proposedMotorThrottle >= 0){
       var timeMotorThrottleChangeIssued = new Date().getTime(); //nanoseconds
-      servo.move(motorNumber, proposedMotorThrottle, function(err){
-        var timeMotorThrottleChangeCompleted = new Date().getTime();
-        var timeToIssueThrottleChange =timeMotorThrottleChangeCompleted-timeMotorThrottleChangeIssued;
-        if(err){console.log(timeToIssueThrottleChange,motorNumber,err);}
-        else{
-          if(true){console.log(motorNumber+' v '+proposedMotorThrottle, timeToIssueThrottleChange);}
-          motors[motorNumber].throttle = proposedMotorThrottle;
-        }
-      });
+      servo.move(motorNumber, 0
+      //   , function(err){
+      //   var timeMotorThrottleChangeCompleted = new Date().getTime();
+      //   var timeToIssueThrottleChange =timeMotorThrottleChangeCompleted-timeMotorThrottleChangeIssued;
+      //   if(err){console.log(timeToIssueThrottleChange,motorNumber,err);}
+      //   else{
+      //     if(true){console.log(motorNumber+' v '+proposedMotorThrottle, timeToIssueThrottleChange);}
+      //     motors[motorNumber].throttle = proposedMotorThrottle;
+      //   }
+      // }
+      );
     }
   };
 
@@ -199,6 +203,7 @@ var takeOff = function(){
     });
   };
 };
+
 var land = function(){
   isLanding = true;
   servo.move(1, 0);

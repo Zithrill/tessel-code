@@ -32,9 +32,10 @@ var msBetweenMinPWMAndCallback = 1000;
 var maxPWM = 0.125;
 var minPWM = 0.002; // Exhaustively tested. 
 
-var motorMaxThrottle = 0.4; 
-var minThrottleIncrement = 0.01;
-var maxThrottleDifference = 0.05;
+var motorMaxThrottle = 0.08; 
+var throttleIncrement = 0.001;
+var maxThrottleDifference = 0.004;
+var initialThrottle = 0.005; //Not starting higher because motor 3 is terrible
 
 // Sensor Calibrations
 var accelMaxGs = 2; // in g's, possible values: 2 4 8
@@ -46,6 +47,7 @@ var isServoModuleReady = false;
 var isAccelModuleReady = false;
 var isHovering = true;
 var isLanding = false;
+var userReady = false;
 
 // Logging stuff
 var colorGreen = '\033[92m';
@@ -100,54 +102,62 @@ motors[2].oppositeMotor = motors[4];
 motors[3].oppositeMotor = motors[1];
 motors[4].oppositeMotor = motors[2];
 
-function arm() {
-  var servoNumber = this.number;
-  servo.configure(servoNumber, minPWM, maxPWM , function (err) {
-    log('    '+servoNumber,'configured.',err?err:'');
-    // Set maxPWM
-    servo.setDutyCycle(servoNumber, maxPWM, function (err) {
-      log('    '+servoNumber,'max PWM set.',err?err:'');
-      setTimeout(function(){
-        // Set minPWM
-        servo.setDutyCycle(servoNumber, minPWM, function (err) {
-          log('    '+servoNumber,'min PWM set.',err?err:'');
-          setTimeout(function(){ 
-            log('    '+servoNumber,'armed.');
-            // If this is the last motor to arm, have it invoke the callback.
-            motors[servoNumber].armed = true;
-            if(motors[1].armed && motors[2].armed && motors[3].armed && motors[4].armed){
-              onMotorsArmed();
-            } 
-          }, msBetweenMinPWMAndCallback);
-        });
-      }, msBetweenMaxAndMinPWM);
-    });
-  });
-};
+// function arm() {
+//   var servoNumber = this.number;
+//   servo.configure(servoNumber, minPWM, maxPWM , function (err) {
+//     log('    '+servoNumber,'configured.',err?err:'');
+//     // Set maxPWM
+//     servo.setDutyCycle(servoNumber, maxPWM, function (err) {
+//       log('    '+servoNumber,'max PWM set.',err?err:'');
+//       setTimeout(function(){
+//         // Set minPWM
+//         servo.setDutyCycle(servoNumber, minPWM, function (err) {
+//           log('    '+servoNumber,'min PWM set.',err?err:'');
+//           setTimeout(function(){ 
+//             log('    '+servoNumber,'armed.');
+//             // If this is the last motor to arm, have it invoke the callback.
+//             motors[servoNumber].armed = true;
+//             if(motors[1].armed && motors[2].armed && motors[3].armed && motors[4].armed){
+//               onMotorsArmed();
+//             } 
+//           }, msBetweenMinPWMAndCallback);
+//         });
+//       }, msBetweenMaxAndMinPWM);
+//     });
+//   });
+// };
 
 // e.g. motors[1].setThrottle(.2);
 function setThrottle(throttle){
   //TODO 'this' probably not correct.
   var motor = this;
   var previousThrottle = motor.currentThrottle;
+  var averageThrottle = ((motors[1].currentThrottle + motors[2].currentThrottle + motors[3].currentThrottle + motors[4].currentThrottle)/4)
   motor.currentThrottle = throttle;
   if(Math.max(motors[1].currentThrottle, motors[2].currentThrottle, motors[3].currentThrottle, motors[4].currentThrottle) - Math.min(motors[1].currentThrottle, motors[2].currentThrottle, motors[3].currentThrottle, motors[4].currentThrottle) <= maxThrottleDifference){
     servo.move(this.number, throttle, function(err){
       motor.currentThrottle = throttle;
       staticLog(motors[1].currentThrottle, motors[2].currentThrottle, motors[3].currentThrottle, motors[4].currentThrottle);
     });
+  } else if(Math.abs(previousThrottle - averageThrottle) > Math.abs(motor.currentThrottle - averageThrottle)){
+      console.log('outta bounds - moving towards average')
+      servo.move(this.number, throttle, function(err){
+        motor.currentThrottle = throttle;
+        staticLog(motors[1].currentThrottle, motors[2].currentThrottle, motors[3].currentThrottle, motors[4].currentThrottle);
+      })
   } else {
     motor.currentThrottle = previousThrottle;
   }
 }
 
+
 // ###############################
 // PRE-FLIGHT
 // ###############################
-var duty1 = [0.125, 0.002, 0.005].reverse();
-var duty2 = [0.125, 0.002, 0.005].reverse();
-var duty3 = [0.125, 0.002, 0.005].reverse();
-var duty4 = [0.125, 0.002, 0.005].reverse();
+var duty1 = [initialThrottle, 0.002, 0.125];
+var duty2 = [initialThrottle, 0.002, 0.125];
+var duty3 = [initialThrottle, 0.002, 0.125];
+var duty4 = [initialThrottle, 0.002, 0.125];
 
 log('Pre-flight checklist:')
 log(' 1.Calibrating modules:')
@@ -161,29 +171,6 @@ accel.on('ready', function () {
   accel.setOutputRate( accelReadsPerSecond, function(err){
     accel.setScaleRange( accelMaxGs, function(err){
       isAccelModuleReady = true;
-  //     if(isAccelModuleReady && isServoModuleReady){ 
-  //       // onModulesReady();
-
-  //       //DON'T FUCKING CHANGE THIS, LUBY
-  //       process.stdin.resume();
-  //       servo.on('ready', function () {
-  //         servo.configure(1, 0, 1, function(){
-  //           process.stdin.on('data', function () {
-  //             servo.move(1, duty1.pop());
-  //             servo.configure(2, 0, 1, function(){
-  //               servo.move(2, duty2.pop());
-  //             });
-  //             servo.configure(3, 0, 1, function(){
-  //               servo.move(3, duty3.pop());
-  //             });
-  //             servo.configure(4, 0, 1, function(){
-  //               servo.move(4, duty4.pop());
-  //               onMotorsArmed();
-  //             });
-  //           });
-  //         });
-  //       });
-  //     }
     });
   });
 });
@@ -195,21 +182,30 @@ var checkModules = function(){
       //DON'T FUCKING CHANGE THIS, LUBY
       process.stdin.resume();
       // servo.on('ready', function () {
-        servo.configure(1, 0, 1, function(){
-          process.stdin.on('data', function () {
-            servo.move(1, duty1.pop());
+      servo.configure(1, 0, 1, function(){
+        process.stdin.on('data', function (duty) {
+          duty = parseFloat(duty);
+          if(String(duty) === 'y\n'){ console.log('so there Geoff'); }
+          if(duty >= 0){
+            servo.move(1, duty);
+            motors[1].currentThrottle = duty;
             servo.configure(2, 0, 1, function(){
-              servo.move(2, duty2.pop());
+              servo.move(2, duty);
+              motors[2].currentThrottle = duty;
             });
             servo.configure(3, 0, 1, function(){
-              servo.move(3, duty3.pop());
+              servo.move(3, duty);
+              motors[3].currentThrottle = duty;
             });
             servo.configure(4, 0, 1, function(){
-              servo.move(4, duty4.pop());
-              // onMotorsArmed();
+              servo.move(4, duty);
+              motors[4].currentThrottle = duty;
             });
-          });
+          } else {
+            userReady = true;
+          }
         });
+      });
       // });    
     } else {
       checkModules();
@@ -217,16 +213,22 @@ var checkModules = function(){
   })
 };
 
-checkModules();
+var checkArrays = function(){
+  setImmediate(function(){
+    // if(duty1.length === 0 && duty2.length === 0 && duty3.length === 0 && duty4.length === 0){
+    if(userReady){
+      setTimeout(function(){
+        onMotorsArmed();
+      }, 2000);
+    } else {
+      checkArrays();
+    }
+  })
+}
 
-// var onModulesReady = function(){
-//   log(colorGreen+'    '+checkMark,'All Tessel modules ready.',colorWhite);
-//   log('  2.Arming motors:');
-//   // motors[4].arm();
-//   // motors[1].arm();
-//   // motors[2].arm();
-//   // motors[3].arm();
-// };
+checkModules();
+checkArrays();
+
 
 var onMotorsArmed = function(){
   log(colorGreen+'    '+checkMark,'All motors armed.',colorWhite);
@@ -246,7 +248,7 @@ var preflightComplete = function(){
 
 var throttleUp = function(motorNumber){
   var motor = motors[motorNumber];
-  var proposedMotorThrottle = motors[motorNumber].currentThrottle+minThrottleIncrement;
+  var proposedMotorThrottle = motors[motorNumber].currentThrottle+throttleIncrement;
   if(proposedMotorThrottle <= motorMaxThrottle){
     motor.setThrottle(proposedMotorThrottle);
   }
@@ -256,7 +258,7 @@ var throttleUp = function(motorNumber){
 
 var throttleDown = function(motorNumber){
   var motor = motors[motorNumber];
-  var proposedMotorThrottle = motor.currentThrottle-minThrottleIncrement;
+  var proposedMotorThrottle = motor.currentThrottle-throttleIncrement;
   if(proposedMotorThrottle >= 0){
     motor.setThrottle(proposedMotorThrottle);
   }

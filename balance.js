@@ -17,7 +17,7 @@ var hover = function(){
         loopy(xyz[1]);
       }, 0);
     } else {
-      if(!mainControl.isLanding){
+      if(mainControl.isLanding){
         landController.land();
       }
     }
@@ -66,13 +66,13 @@ var balanceAxis = function(axis, accelReading, callback){
       throttleUp(posMotor);
       throttleUp(negMotor);
     }
-  } 
+  }; 
 
   if(axis === 'x'){
-    balanceMotors(1,3);
+    balanceMotors(1, 3);
   }
   if(axis === 'y'){
-    balanceMotors(2,4);
+    balanceMotors(2, 4);
   }
   callback();
 };
