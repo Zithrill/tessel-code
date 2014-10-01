@@ -8,6 +8,13 @@ var checkMark = mainControl.checkMark;
 var colorRed =  mainControl.colorRed;
 var colorWhite =  mainControl.colorWhite;
 
+var duty1 = [0.005, 0.002, 0.125];
+var duty2 = [0.005, 0.002, 0.125];
+var duty3 = [0.005, 0.002, 0.125];
+var duty4 = [0.005, 0.002, 0.125];
+
+console.log('Pre-flight checklist:')
+console.log(' 1.Calibrating modules:')
 servo.on('ready', function(){
   console.log('    Servo module ready.')
   mainControl.isServoModuleReady = true;
@@ -15,31 +22,56 @@ servo.on('ready', function(){
 
 accel.on('ready', function () {
   console.log('    Accel module ready');
-  accel.setOutputRate( mainControl.accelReadsPerSecond, function(err){
-    accel.setScaleRange( mainControl.accelMaxGs, function(err){
+  accel.setOutputRate( accelReadsPerSecond, function(err){
+    accel.setScaleRange( accelMaxGs, function(err){
       mainControl.isAccelModuleReady = true;
     });
   });
 });
 
-var armAndTakeOff = function(){
-  var onModulesReady = function(){
-    console.log(colorGreen+'    '+checkMark,'All Tessel modules ready.',colorWhite);
-    console.log('  2.Arming motors:');
-    mainControl.motors[1].arm();
-    mainControl.motors[4].arm();
-    mainControl.motors[3].arm();
-    mainControl.motors[2].arm();
-  };
-
-  console.log('Pre-flight checklist:')
-  console.log(' 1.Calibrating modules:')
-  if(mainControl.isAccelModuleReady && mainControl.isServoModuleReady){ 
-    onModulesReady();
-  } else {
-    console.log('not ready, try again');
-  }
+var checkModules = function(){
+  setImmediate(function(){
+    if(mainControl.isAccelModuleReady && mainControl.isServoModuleReady){ 
+      // onModulesReady();
+      //DON'T FUCKING CHANGE THIS, LUBY
+      process.stdin.resume();
+      // servo.on('ready', function () {
+        servo.configure(1, 0, 1, function(){
+          process.stdin.on('data', function () {
+            servo.move(1, duty1.pop());
+            servo.configure(2, 0, 1, function(){
+              servo.move(2, duty2.pop());
+            });
+            servo.configure(3, 0, 1, function(){
+              servo.move(3, duty3.pop());
+            });
+            servo.configure(4, 0, 1, function(){
+              servo.move(4, duty4.pop());
+            });
+          });
+        });
+      // });    
+    } else {
+      checkModules();
+    }
+  })
 };
+
+var checkArrays = function(){
+  setImmediate(function(){
+    if(duty1.length === 0 && duty2.length === 0 && duty3.length === 0 && duty4.length === 0){
+      setTimeout(function(){
+        onMotorsArmed();
+      }, 1500);
+    } else {
+      checkArrays();
+    }
+  })
+}
+
+checkModules();
+checkArrays();
+
 
 var preflightComplete = function(){
   console.log(colorGreen+'  '+checkMark,'Pre-flight complete.',colorWhite);  
@@ -51,6 +83,7 @@ var onMotorsArmed = function(){
   console.log(colorGreen+'    '+checkMark,'All motors armed.',colorWhite);
   preflightComplete();
 };
+
 
 exports.armAndTakeOff = armAndTakeOff;
 exports.onMotorsArmed = onMotorsArmed;

@@ -5,6 +5,7 @@ var setThrottle = mainControl.setThrottle;
 
 var land = function(){
   mainControl.isLanding = true;
+  mainControl.isHovering = false;
   mainControl.motors[1].setThrottle(0);
   mainControl.motors[2].setThrottle(0);
   mainControl.motors[3].setThrottle(0);

@@ -34,12 +34,12 @@ var maxPWM = 0.125;
 var minPWM = 0.002; // Exhaustively tested. 
 
 var motorMaxThrottle = 0.4; 
-var minThrottleIncrement = 0.02;
-var maxThrottleDifference = 0.1;
+var minThrottleIncrement = 0.01;
+var maxThrottleDifference = 0.05;
 
 // Sensor Calibrations
 var accelMaxGs = 2; // in g's, possible values: 2 4 8
-var accelThresholdBeforeBalancing = 0.03;
+var accelThresholdBeforeBalancing = 0.06;
 var accelReadsPerSecond = 250;
 
 // Control flow variables
@@ -55,45 +55,20 @@ var colorRed = '\033[91m';
 var colorWhite = '\033[97m';
 
 var staticLog = function(motor1, motor2, motor3, motor4){
-  // process.stdout.write('\u001B[2J\u001B[0;0f'
-  //   +'Motor throttles:\n'
-  //   +'1: '+motor1.toFixed(3)+'\n'
-  //   +'2: '+motor2.toFixed(3)+'\n'
-  //   +'3: '+motor3.toFixed(3)+'\n'
-  //   +'4: '+motor4.toFixed(3)+'\n'
-  //   +'A: '+((motor1+motor2+motor3+motor4)/4).toFixed(3)
-  // );
+  process.stdout.write('\u001B[2J\u001B[0;0f'
+    +'Motor throttles:\n'
+    +'1: '+motor1.toFixed(3)+'\n'
+    +'2: '+motor2.toFixed(3)+'\n'
+    +'3: '+motor3.toFixed(3)+'\n'
+    +'4: '+motor4.toFixed(3)+'\n'
+    +'A: '+((motor1+motor2+motor3+motor4)/4).toFixed(3)
+  );
 };
 
 //Motor Specific Functions
 
-var arm = function() {
-  var servoNumber = this.number;
-  servo.configure(servoNumber, minPWM, maxPWM , function (err) {
-    console.log('    '+servoNumber,'configured.',err?err:'');
-    // Set maxPWM
-    servo.setDutyCycle(servoNumber, maxPWM, function (err) {
-      console.log('    '+servoNumber,'max PWM set.',err?err:'');
-      setTimeout(function(){
-        // Set minPWM
-        servo.setDutyCycle(servoNumber, minPWM, function (err) {
-          console.log('    '+servoNumber,'min PWM set.',err?err:'');
-          setTimeout(function(){ 
-            console.log('    '+servoNumber,'armed.');
-            // If this is the last motor to arm, have it invoke the callback.
-            motors[servoNumber].armed = true;
-            if(motors[1].armed && motors[2].armed && motors[3].armed && motors[4].armed){
-              preflight.onMotorsArmed();
-            } 
-          }, msBetweenMinPWMAndCallback);
-        });
-      }, msBetweenMaxAndMinPWM);
-    });
-  });
-};
-
 // e.g. motors[1].setThrottle(.2);
-var setThrottle = function(throttle){
+function setThrottle(throttle){
   //TODO 'this' probably not correct.
   var motor = this;
   var previousThrottle = motor.currentThrottle;
@@ -114,28 +89,24 @@ var motors = {
     number: 1,
     currentThrottle: 0,
     setThrottle: setThrottle,
-    arm: arm,
     armed: false
   },
   2: {
     number: 2,
     currentThrottle: 0,
     setThrottle: setThrottle,
-    arm: arm,
     armed: false
   },
   3: {
     number: 3,
     currentThrottle: 0,
     setThrottle: setThrottle,
-    arm: arm,
     armed: false
   },
   4: {
     number: 4,
     currentThrottle: 0,
     setThrottle: setThrottle,
-    arm: arm,
     armed: false
   }
 };
@@ -157,3 +128,4 @@ exports.accelThresholdBeforeBalancing = accelThresholdBeforeBalancing;
 exports.isLanding = isLanding;
 exports.isHovering = isHovering;
 exports.motorMaxThrottle = motorMaxThrottle;
+exports.minThrottleIncrement = minThrottleIncrement;
