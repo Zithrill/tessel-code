@@ -11,6 +11,7 @@
   "license": "ISC",
   "dependencies": {
     "accel-mma84": "^0.2.3",
-    "nodejs-websocket": "^1.0.0"
+    "nodejs-websocket": "^1.0.0",
+    "servo-pca9685": "^0.1.3"
   }
 }

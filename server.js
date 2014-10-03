@@ -1,32 +1,9 @@
 var tessel = require('tessel');
 var wifi = require('wifi-cc3000');
 var ws = require("nodejs-websocket");
+var accel = require("mainControl.js").acceleromter;
+var accelData = require("mainControl.js").accelData;
 
-//Used for test accel data
-var accel = require('accel-mma84').use(tessel.port['A']);
-var accelData = {x: 0, y: 0, z: 0};
-
-// ###############################
-// ACCELEROMETER SETUP
-// this can be replaced with the 
-// modulirized code as long as we
-// can access the accelData
-// ###############################
-
-// Initialize the accelerometer.
-accel.on('ready', function () {
-    // Stream accelerometer data
-  accel.on('data', function (xyz) {
-    accelData.x = xyz[0];
-    accelData.y = xyz[1];
-    accelData.z = xyz[2];
-  });
-
-});
-
-accel.on('error', function (err) {
-  console.log('Error:', err);
-});
 
 // ###############################
 // SERVER SETUP
