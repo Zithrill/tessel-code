@@ -1,59 +1,39 @@
-// ###############################
-// NOTES
-/* ###############################
-
-- If no input command is received for about 1 second, f3 f2 is beeped and the ESC returns to disarmed state, waiting for a valid arming signal.
-
-- Try using process.end
-
-- Disconnect battery for at least 10s between flights to let ESCs discharge capacitors.
-
-- Try making motors arm one at a time slow enough for a human to hear errors. 4x|: f1 . f1 f1 f3 :|
-
-- Increase throttle increment 0.05.
-
-- Increase accelerometer threshold to 0.06.
-
-- Balance the hardware (#3 heavy).
-
-*///##############################
-// REQUIREMENTS
-// ###############################
 var tessel = require('tessel');
 var accel = require('accel-mma84').use(tessel.port['D']);
 var servo = require('servo-pca9685').use(tessel.port['C']);
-var preflight = require('./preflight.js');
 
 // ###############################
 // SETTINGS
 // ###############################
 // Throttle settings
-var msBetweenMaxAndMinPWM = 1000; // Using 1000ms to delay rapid startup
-var msBetweenMinPWMAndCallback = 1000;
-var maxPWM = 0.125;
-var minPWM = 0.002; // Exhaustively tested. 
+// Exhaustively tested. 
+// maxPWM = 0.125; -- First value input for process.stdin (high value)
+// minPWM = 0.002; // Second value input for process.stdin (low value)
+// initialThrottle = 0.005; //Third value input for process.stdin
+// increment forward to by 0.01 to 0.04 and then hover
 
-var motorMaxThrottle = 0.4; 
-var minThrottleIncrement = 0.01;
-var maxThrottleDifference = 0.05;
+var motorMaxThrottle = 0.06; 
+var throttleIncrement = 0.001;
+var maxThrottleDifference = 0.005;
 
 // Sensor Calibrations
+var accelData = null;
 var accelMaxGs = 2; // in g's, possible values: 2 4 8
-var accelThresholdBeforeBalancing = 0.06;
-var accelReadsPerSecond = 250;
+var accelThresholdBeforeBalancing = 0.04;
+var accelReadsPerSecond = 350;
 
 // Control flow variables
 var isServoModuleReady = false;
 var isAccelModuleReady = false;
 var isHovering = true;
 var isLanding = false;
+var userReady = false;
 
-// Logging settings
+// Log data to console to monitor motor speed/average speed/accelerometer reads
 var colorGreen = '\033[92m';
 var checkMark = '\u2714';
 var colorRed = '\033[91m';
-var colorWhite = '\033[97m';
-
+var colorWhite = '' //'\033[97m';
 var staticLog = function(motor1, motor2, motor3, motor4){
   process.stdout.write('\u001B[2J\u001B[0;0f'
     +'Motor throttles:\n'
@@ -61,60 +41,48 @@ var staticLog = function(motor1, motor2, motor3, motor4){
     +'2: '+motor2.toFixed(3)+'\n'
     +'3: '+motor3.toFixed(3)+'\n'
     +'4: '+motor4.toFixed(3)+'\n'
-    +'A: '+((motor1+motor2+motor3+motor4)/4).toFixed(3)
+    +'A: '+((motor1+motor2+motor3+motor4)/4).toFixed(3)+'\n'
+    +'X: '+accelData[0]+'\n'
+    +'Y: '+accelData[1]
   );
 };
 
-//Motor Specific Functions
+// Motor calibrations
 
+var Motor = function(motorNumber){
+  this.number = motorNumber;
+  this.currentThrottle = 0;
+  this.setThrottle = setThrottle
+}
+
+var motors = {
+  1: new Motor(1),
+  2: new Motor(2),
+  3: new Motor(3),
+  4: new Motor(4)
+};
 // e.g. motors[1].setThrottle(.2);
 function setThrottle(throttle){
   //TODO 'this' probably not correct.
   var motor = this;
   var previousThrottle = motor.currentThrottle;
+  var averageThrottle = ((motors[1].currentThrottle + motors[2].currentThrottle + motors[3].currentThrottle + motors[4].currentThrottle)/4)
   motor.currentThrottle = throttle;
   if(Math.max(motors[1].currentThrottle, motors[2].currentThrottle, motors[3].currentThrottle, motors[4].currentThrottle) - Math.min(motors[1].currentThrottle, motors[2].currentThrottle, motors[3].currentThrottle, motors[4].currentThrottle) <= maxThrottleDifference){
     servo.move(this.number, throttle, function(err){
       motor.currentThrottle = throttle;
       staticLog(motors[1].currentThrottle, motors[2].currentThrottle, motors[3].currentThrottle, motors[4].currentThrottle);
     });
+  } else if(Math.abs(previousThrottle - averageThrottle) > Math.abs(motor.currentThrottle - averageThrottle)){
+      console.log('outta bounds - moving towards average')
+      servo.move(this.number, throttle, function(err){
+        motor.currentThrottle = throttle;
+        staticLog(motors[1].currentThrottle, motors[2].currentThrottle, motors[3].currentThrottle, motors[4].currentThrottle);
+      })
   } else {
     motor.currentThrottle = previousThrottle;
   }
-};
-
-// Motor calibrations
-var motors = {
-  1: {
-    number: 1,
-    currentThrottle: 0,
-    setThrottle: setThrottle,
-    armed: false
-  },
-  2: {
-    number: 2,
-    currentThrottle: 0,
-    setThrottle: setThrottle,
-    armed: false
-  },
-  3: {
-    number: 3,
-    currentThrottle: 0,
-    setThrottle: setThrottle,
-    armed: false
-  },
-  4: {
-    number: 4,
-    currentThrottle: 0,
-    setThrottle: setThrottle,
-    armed: false
-  }
-};
-
-motors[1].oppositeMotor = motors[3];
-motors[2].oppositeMotor = motors[4];
-motors[3].oppositeMotor = motors[1];
-motors[4].oppositeMotor = motors[2];
+}
 
 exports.setThrottle = setThrottle;
 exports.motors = motors;
@@ -129,3 +97,5 @@ exports.isLanding = isLanding;
 exports.isHovering = isHovering;
 exports.motorMaxThrottle = motorMaxThrottle;
 exports.minThrottleIncrement = minThrottleIncrement;
+exports.accelerometer = accel;
+exports.accelData = accelData;

@@ -5,7 +5,7 @@ var servolib = require('servo-pca9685'); // Or 'servo-pca9685' in your own code
 
 var servo = servolib.use(tessel.port['C']);
 
-var servoNumber = 4; // Plug your servo or motor controller into port 1
+var servoNumber = 1; // Plug your servo or motor controller into port 1
 
 // Reenable the console
 process.stdin.resume();

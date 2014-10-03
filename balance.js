@@ -2,81 +2,87 @@ var tessel = require('tessel');
 var accel = require('accel-mma84').use(tessel.port['D']);
 var servo = require('servo-pca9685').use(tessel.port['C']);
 var mainControl = require('./mainControl.js');
-var landController = require('./land.js');
+var land = require('./land.js')land;
 var setThrottle = mainControl.setThrottle;
+var accelData = mainControl.accelData;
+var userReady= mainControl.userReady;
 
-var hover = function(){
-  //Gets accelerometer data from accelerometer (xyz);
-  accel.getAcceleration(function(err, xyz){ // TODO would rather use accel.on('data', callback(xyz));
-    //if still isHovering - go through event loop
-    if(mainControl.isHovering){
+accel.on('data', function(xyz){
+  accelData = xyz;
+});
+
+var checkIfReadyToLaunch = function(){
+  setImmediate(function(){
+    if(userReady){
       setTimeout(function(){
-        loopx(xyz[0]);
-      }, 0);
-      setTimeout(function(){
-        loopy(xyz[1]);
-      }, 0);
+        launch();
+      }, 500);
     } else {
-      if(mainControl.isLanding){
-        landController.land();
-      }
+      checkIfReadyToLaunch();
     }
-  });
+  })
 };
 
-var loopx = function(x){
-  balanceAxis('x', x, function(){
-    hover();
-  });
-};
+checkIfReadyToLaunch();
 
-var loopy = function(y){
-  balanceAxis('y', y, function(){
-    hover();
-  });
-};
-
-var throttleUp = function(motorNumber){
-  var motor = mainControl.motors[motorNumber];
-  var proposedMotorThrottle = motor.currentThrottle+mainControl.minThrottleIncrement;
-  if(proposedMotorThrottle <= mainControl.motorMaxThrottle){
+var throttleUp = function(motorNumber, boost){
+  var boost = boost || 0;
+  var motor = motors[motorNumber];
+  var proposedMotorThrottle = motors[motorNumber].currentThrottle+throttleIncrement+juice;
+  if(proposedMotorThrottle <= motorMaxThrottle){
     motor.setThrottle(proposedMotorThrottle);
   }
 };
 
 var throttleDown = function(motorNumber){
-  var motor = mainControl.motors[motorNumber];
-  var proposedMotorThrottle = motor.currentThrottle-mainControl.minThrottleIncrement;
+  var motor = motors[motorNumber];
+  var proposedMotorThrottle = motor.currentThrottle-throttleIncrement;
   if(proposedMotorThrottle >= 0){
     motor.setThrottle(proposedMotorThrottle);
   }
 };
 
-var balanceAxis = function(axis, accelReading, callback){
-  var balanceMotors = function(posMotor, negMotor){
-    if(accelReading > mainControl.accelThresholdBeforeBalancing){
+var balanceAxis = function(axis){
+  var balanceMotors = function(posMotor, negMotor, accelReading){
+    if(accelReading > accelThresholdBeforeBalancing){
       throttleDown(posMotor);
       throttleUp(negMotor);
     }
-    else if(accelReading < -1 * mainControl.accelThresholdBeforeBalancing){
+    else if(accelReading < -1 * accelThresholdBeforeBalancing){
       throttleDown(negMotor);
       throttleUp(posMotor);
     }
     else{
-      throttleUp(posMotor);
-      throttleUp(negMotor);
+      throttleUp(1, 0.002);
+      throttleUp(2, 0.002);
+      throttleUp(3, 0.002);
+      throttleUp(4, 0.002);
     }
+    setImmediate(function(){
+      balanceAxis(axis); //After balancing motors call balanceAxis
+    });
   }; 
-
   if(axis === 'x'){
-    balanceMotors(1, 3);
+    balanceMotors(1,2, accelData[0]);
+  } else if (axis === 'y'){
+    balanceMotors(4,3, accelData[1]);
   }
-  if(axis === 'y'){
-    balanceMotors(2, 4);
-  }
-  callback();
 };
 
+var launch = function(){
+  //Gets accelerometer data from accelerometer (xyz);
+  //if still isHovering - go through event loop
+  if(isHovering){
+    setImmediate(function(){
+      balanceAxis('x');
+    });
 
-exports.hover = hover;
-
+    setImmediate(function(){
+      balanceAxis('y');
+    });
+  } else {
+    if(isLanding){
+      land();
+    }
+  }
+};
