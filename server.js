@@ -4,7 +4,7 @@ var ws = require("nodejs-websocket");
 
 //Used for test accel data
 var accel = require('accel-mma84').use(tessel.port['A']);
-var accelData ={x:0,y:0,z:0};
+var accelData = {x: 0, y: 0, z: 0};
 
 // ###############################
 // ACCELEROMETER SETUP
@@ -24,7 +24,7 @@ accel.on('ready', function () {
 
 });
 
-accel.on('error', function(err){
+accel.on('error', function (err) {
   console.log('Error:', err);
 });
 
@@ -34,16 +34,15 @@ accel.on('error', function(err){
 
 var startServer = function () {
   var port = 8000;
-  var dataOn = null;
   var server = ws.createServer(function (conn) {
     console.log("New connection");
     conn.on("text", function (str) {
       // This will basicly be our control switch
       if (str === 'land') {
-      console.log("Received " + str)
+        console.log("Received " + str);
 
       } else if (str === 'takeOff') {
-        console.log("Received " + str)
+        console.log("Received " + str);
         // This is temp code and will need to be rewritten such that 
         // when the connection closes this on data is removed
         accel.on('data', function (xyz) {
@@ -53,7 +52,7 @@ var startServer = function () {
           conn.sendText("X-Axis: " + accelData.x + "\nY-Axis: " + accelData.y + "\nZ-Axis: " + accelData.z);
         });
       } else if (str === 'preflight') {
-        console.log("Received " + str)
+        console.log("Received " + str);
       } else {
         console.log("Invalid Command: ", str);
       }
@@ -63,7 +62,7 @@ var startServer = function () {
     // This is where there should be clean up of listeners
     // if 
     conn.on("close", function (code, reason) {
-        console.log("Connection closed")
+      console.log("Connection closed: ", code, reason);
     });
   }).listen(port);
 
